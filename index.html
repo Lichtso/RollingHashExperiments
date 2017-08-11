@@ -1,0 +1,97 @@
+<html>
+    <head>
+        <style>
+            .container {
+                display: flex;
+            }
+            .container * {
+                width: 50%;
+            }
+            .view {
+                height: 80%;
+                overflow: scroll;
+                border: 1px solid black;
+                font-family: monospace;
+            }
+            pre {
+                display: inline;
+            }
+        </style>
+        <script>
+            function CyclicHash(factor, modulo, windowLength) {
+                let indexInWindow = 0;
+                const symbolWindow = new Array(windowLength).fill(0),
+                      outFactor = Math.pow(factor, windowLength-1)%modulo;
+                this.value = 0;
+                this.push = function(symbol) {
+                    this.value += (modulo*outFactor-symbolWindow[indexInWindow])*outFactor;
+                    symbolWindow[indexInWindow] = symbol;
+                    indexInWindow = (indexInWindow+1)%windowLength;
+                    this.value *= factor;
+                    this.value += symbol;
+                    this.value %= modulo;
+                    return this.value+1 == modulo;
+                }.bind(this);
+            }
+
+            String.prototype.hashCode = function() {
+                let result = 0x811C9DC5;
+                for(let i = 0, l = this.length; i < l; ++i) {
+                    result ^= this.charCodeAt(i);
+                    result += (result<<1)+(result<<4)+(result<<7)+(result<<8)+(result<<24);
+                }
+                return result>>>0;
+            };
+
+            function generateChunk(view, text) {
+                const hashValue = text.hashCode(),
+                      hashHex = ('0000000'+hashValue.toString(16)).substr(-8).toUpperCase();
+                const element = document.createElement('pre');
+                element.setAttribute('style', 'background-color: #'+hashHex.substr(-6));
+                element.setAttribute('title', '0x'+hashHex);
+                element.innerText = text;
+                view.appendChild(element);
+                return element;
+            }
+
+            function process(side) {
+                const view = document.getElementById('view'+side),
+                      url = document.getElementById('url'+side).value,
+                    hash = new CyclicHash(
+                        parseInt(document.getElementById('factor').value),
+                        parseInt(document.getElementById('modulo').value),
+                        parseInt(document.getElementById('windowLength').value)
+                    );
+                view.innerHTML = '';
+                fetch(url).then(function(response) {
+                    return response.text();
+                }).then(function(text) {
+                    let lastIndex = 0, chunkCount = 1;
+                    for(let i = 0; i < text.length; ++i) {
+                        if(hash.push(text[i].charCodeAt(0))) {
+                            generateChunk(view, text.substring(lastIndex, i));
+                            lastIndex = i;
+                            ++chunkCount;
+                        }
+                    }
+                    generateChunk(view, text.substring(lastIndex));
+                    // text.length/chunkCount;
+                });
+            }
+        </script>
+    </head>
+    <body>
+        Factor: <input id="factor" type="text" value="11" />,
+        Modulo: <input id="modulo" type="text" value="307" />,
+        Window-Length: <input id="windowLength" type="text" value="16" />
+        <input type="button" value="GO" onclick="process('L'); process('R');" /><br />
+        <div class="container">
+            <input id="urlL" type="text" value="" />
+            <input id="urlR" type="text" value="" />
+        </div>
+        <div class="container">
+            <div class="view" id="viewL"></div>
+            <div class="view" id="viewR"></div>
+        </div>
+    </body>
+</html>
