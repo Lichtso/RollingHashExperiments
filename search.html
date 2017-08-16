@@ -1,0 +1,58 @@
+<html>
+    <head>
+        <style>
+            .container {
+                display: flex;
+            }
+            .container * {
+                width: 50%;
+            }
+            .view {
+                height: 80%;
+                overflow: scroll;
+                border: 1px solid black;
+                font-family: monospace;
+            }
+            pre {
+                display: inline;
+            }
+        </style>
+        <script src="main.js"></script>
+        <script>
+            function process() {
+                const view = document.getElementById('view'),
+                      url = document.getElementById('url').value,
+                      needle = document.getElementById('needle').value,
+                    hash = new RollingHash(
+                        parseInt(document.getElementById('base').value),
+                        parseInt(document.getElementById('modulo').value),
+                        needle.length
+                    );
+                let needleHashValue;
+                for(let i = 0, l = needle.length; i < l; ++i)
+                    needleHashValue = hash.push(needle.charCodeAt(i));
+                hash.reset();
+                view.innerHTML = '';
+                fetch(url).then(function(response) {
+                    return response.text();
+                }).then(function(haystack) {
+                    for(let i = needle.length-1, l = haystack.length; i < l; ++i)
+                        if(hash.push(haystack.charCodeAt(i)) == needleHashValue)
+                            generateChunk(view, haystack.substr(i-needle.length+1, needle.length)+'\n');
+                });
+            }
+        </script>
+    </head>
+    <body>
+        base = <input id="base" type="text" size="6" value="11" />;
+        modulo = <input id="modulo" type="text" size="6" value="307" />;
+        needle = <input id="needle" type="text" size="20" value="" />;
+        <input type="button" value="GO" onclick="process();" /><br />
+        <div class="container">
+            <input id="url" type="text" value="" />
+        </div>
+        <div class="container">
+            <div class="view" id="view"></div>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,62 @@
+<html>
+    <head>
+        <style>
+            .container {
+                display: flex;
+            }
+            .container * {
+                width: 50%;
+            }
+            .view {
+                height: 80%;
+                overflow: scroll;
+                border: 1px solid black;
+                font-family: monospace;
+            }
+            pre {
+                display: inline;
+            }
+        </style>
+        <script src="main.js"></script>
+        <script>
+            function process(side) {
+                const view = document.getElementById('view'+side),
+                      url = document.getElementById('url'+side).value,
+                    hash = new RollingHash(
+                        parseInt(document.getElementById('base').value),
+                        parseInt(document.getElementById('modulo').value),
+                        parseInt(document.getElementById('windowLength').value)
+                    );
+                view.innerHTML = '';
+                fetch(url).then(function(response) {
+                    return response.text();
+                }).then(function(text) {
+                    let lastIndex = 0, chunkCount = 1;
+                    for(let i = 0, l = text.length; i < l; ++i) {
+                        if(hash.push(text.charCodeAt(i)) == 0) {
+                            generateChunk(view, text.substring(lastIndex, i));
+                            lastIndex = i;
+                            ++chunkCount;
+                        }
+                    }
+                    generateChunk(view, text.substring(lastIndex));
+                    // text.length/chunkCount;
+                });
+            }
+        </script>
+    </head>
+    <body>
+        base = <input id="base" type="text" size="6" value="11" />;
+        modulo = <input id="modulo" type="text" size="6" value="307" />;
+        window.length = <input id="windowLength" type="text" size="6" value="16" />;
+        <input type="button" value="GO" onclick="process('L'); process('R');" /><br />
+        <div class="container">
+            <input id="urlL" type="text" value="" />
+            <input id="urlR" type="text" value="" />
+        </div>
+        <div class="container">
+            <div class="view" id="viewL"></div>
+            <div class="view" id="viewR"></div>
+        </div>
+    </body>
+</html>
